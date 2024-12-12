@@ -17,18 +17,26 @@ parsed_input.each_with_index do |val, idx|
     val.times { |_| memory_array << file_id }
     file_id += 1
   else
-    val.times { |_| memory_array << '.' }
+    val.times { |_| memory_array << nil }
   end
 end
 
 p memory_array
 
-until memory_array.find_index('.') > memory_array.rindex { |n| n != '.' } do
-  target_index = memory_array.find_index('.')
-  source_index = memory_array.rindex{|n| n != '.'}
-  memory_array[target_index] = memory_array[source_index]
-  memory_array[source_index] = '.'
+beg_idx = 0
+end_idx = memory_array.length - 1
+
+while beg_idx < end_idx do
+  if !memory_array[beg_idx].nil?
+    beg_idx += 1
+  elsif memory_array[end_idx].nil?
+    end_idx -= 1
+  else
+    memory_array[beg_idx] = memory_array[end_idx]
+    memory_array[end_idx] = nil
+  end
+  p end_idx - beg_idx
 end
 
-last_index = memory_array.find_index('.')
+last_index = memory_array.find_index(nil)
 p memory_array[0...last_index].each_with_index.reduce(0) { |sum, (mem, idx)| sum + mem * idx }
