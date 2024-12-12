@@ -86,3 +86,4 @@ end
 grid = Grid.new(parsed_input)
 
 p grid.trees.reduce(0) {|sum, tree| sum + tree.nodes_at_n(9).to_set.size }
+p grid.trees.reduce(0) {|sum, tree| sum + tree.nodes_at_n(9).size }
