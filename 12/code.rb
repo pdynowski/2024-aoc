@@ -18,28 +18,45 @@ class Region
 
   def perimeter
     points.reduce(0) do |sum, point|
-      sum + 4 - bordering_points(point)
+      sum + 4 - neighbors(point).count
     end
   end
 
-  def bordering_points(target_point)
-    points.select do |point|
-      Mapping::DIRS.any? do |dir|
-        point + dir == target_point
-      end
-    end.length
+  def neighbors(target_point)
+    neighbors = []
+    Mapping::DIRS.each do |dir|
+      point = target_point + dir
+      neighbors << point if points.include?(point)
+    end
+    neighbors
   end
 
   def cost
     area * perimeter
   end
 
-  def mod_price
+  def mod_cost
     area * sides
   end
 
   def sides
-
+    exterior_corners = 0
+    interior_corners = 0
+    points.each do |point|
+      exterior_corners += 1 if !points.include?(point + Complex(1,0)) && !points.include?(point + Complex(0,-1))
+      exterior_corners += 1 if !points.include?(point + Complex(1,0)) && !points.include?(point + Complex(0,1))
+      exterior_corners += 1 if !points.include?(point + Complex(-1,0)) && !points.include?(point + Complex(0,-1))
+      exterior_corners += 1 if !points.include?(point + Complex(-1,0)) && !points.include?(point + Complex(0,1))
+      interior_corners += 1 if !points.include?(point + Complex(0,-1)) && points.include?(point + Complex(1,0)) && points.include?(point + Complex(1,-1))
+      interior_corners += 1 if !points.include?(point + Complex(0,-1)) && points.include?(point + Complex(-1,0)) && points.include?(point + Complex(-1,-1))
+      interior_corners += 1 if !points.include?(point + Complex(1,0)) && points.include?(point + Complex(0,-1)) && points.include?(point + Complex(1,-1))
+      interior_corners += 1 if !points.include?(point + Complex(1,0)) && points.include?(point + Complex(0,1)) && points.include?(point + Complex(1,1))
+      interior_corners += 1 if !points.include?(point + Complex(0,1)) && points.include?(point + Complex(1,0)) && points.include?(point + Complex(1,1))
+      interior_corners += 1 if !points.include?(point + Complex(0,1)) && points.include?(point + Complex(-1,0)) && points.include?(point + Complex(-1,1))
+      interior_corners += 1 if !points.include?(point + Complex(-1,0)) && points.include?(point + Complex(0,1)) && points.include?(point + Complex(-1,1))
+      interior_corners += 1 if !points.include?(point + Complex(-1,0)) && points.include?(point + Complex(0,-1)) && points.include?(point + Complex(-1,-1))
+    end
+    exterior_corners + interior_corners/2
   end
 
   def border?(point, point_id)
@@ -61,21 +78,6 @@ parsed_input = InputParser.parse_input(test_state: false, parser: parser)
 # parsed_input = [['A', 'A', 'A', 'A'],['B', 'B', 'C', 'D'],['B', 'B', 'C', 'C'],['E', 'E', 'E', 'C']]
 
 # p parsed_input
-
-def merge_regions(regions)
-  ids = regions.map {|region| region.id}.uniq
-  ids.each do |id|
-    regs = regions.select{ |region| region.id == id }
-    regs.combination(2).each do |combo|
-      reg_1, reg_2 = combo
-      if reg_1.points.any? {|pt| reg_2.border?(pt, id)}
-        reg_1.points.merge(reg_2.points)
-        regions.delete(reg_2)
-      end
-    end
-  end
-  regions
-end
 
 def build_region(map, region, point, unvisited_points)
   dirs = Mapping::DIRS
@@ -112,7 +114,7 @@ def build_regions(grid)
     build_region(map, region, starting_point, unvisited_points)
     regions << region
   end
-  
+
   regions
 end
 
@@ -123,3 +125,8 @@ regions.each do |region|
 end
 
 p regions.sum {|region| region.cost }
+
+regions.each do |region|
+  puts "Region #{region.id}, area: #{region.area}, sides: #{region.sides}, cost: #{region.mod_cost}"
+end
+p regions.sum {|region| region.mod_cost }
