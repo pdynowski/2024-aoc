@@ -78,10 +78,6 @@ robots.each do |robot|
   q4 += 1 if robot.position.real.between?(width/2+1,width-1) && robot.position.imag.between?(height/2 + 1,height-1)
 end
 
-p q1
-p q2
-p q3
-p q4
 p q1*q2*q3*q4
 
 
