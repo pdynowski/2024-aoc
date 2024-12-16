@@ -1,5 +1,6 @@
 require_relative '../utils/input_parser'
 require_relative '../utils/mapping'
+require_relative '../utils/patches'
 require 'pry'
 
 parser = ->(line) do
@@ -64,6 +65,38 @@ class OlympicMap < Mapping
     return score
   end
 
+  def get_paths(cheapest_route)
+    queue = [[start_position, 0, [start_position]]]
+
+    visited = Hash.new { |hash, key| hash[key] = 10000000000000000 }
+    paths = []
+    while queue.length > 0 do
+
+      position, score, path = queue.shift
+
+      key = composite_key(position)
+      next if score > cheapest_route
+      next if visited[key] < score
+
+      visited[key] = score
+      if position.coordinates == end_coordinates && score == cheapest_route
+        paths << path
+        next
+      end
+
+      new_position = Position.new(position.coordinates + position.facing, position.facing)
+      if !walls.include?(new_position.coordinates)
+        queue << [new_position, score + 1, path.deep_dup << new_position]
+      end
+
+      right_turn = Position.new(position.coordinates, position.facing * Complex(0,-1))
+      left_turn = Position.new(position.coordinates, position.facing * Complex(0,1))
+      queue << [right_turn, score+1000, path.deep_dup]
+      queue << [left_turn, score+1000, path.deep_dup]
+    end
+    return paths
+  end
+
   def set_locations
     grid.each_with_index do |row, y|
       row.each_with_index do |cell, x|
@@ -83,6 +116,16 @@ end
 
 map = OlympicMap.new(parsed_input)
 
+# s = Time.now
+# p map.solve_maze
+# puts "Elapsed time: #{Time.now - s}"
+
 s = Time.now
-p map.solve_maze
+paths = map.get_paths(73432)
+locations = Set.new
+paths.each {|path| path.each {|pos| locations << pos.coordinates } }
+p locations.length
 puts "Elapsed time: #{Time.now - s}"
+
+
+# 7036/73432
