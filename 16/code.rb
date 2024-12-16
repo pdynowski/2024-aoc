@@ -6,7 +6,7 @@ parser = ->(line) do
   line.strip.split('')
 end
 
-parsed_input = InputParser.parse_input(test_state: true, parser: parser)
+parsed_input = InputParser.parse_input(test_state: false, parser: parser)
 
 class Position
   attr_accessor :coordinates, :facing
@@ -19,52 +19,49 @@ end
 
 class OlympicMap < Mapping
 
-  attr_accessor :walls, :start_position, :end_coordinates, :location_values, :position_chains, :visited_positions, :end_values
+  attr_accessor :walls, :start_position, :end_coordinates, :location_values, :visited_locations, :visitation_queue
 
   def initialize(grid)
     super(grid)
     @walls = []
     @start_position = nil
     @end_coordinates = nil
-    set_locations
     @location_values = Hash.new { |hash, key| hash[key] = nil }
-    @visited_positions = Set.new.add(start_position)
-    # print_grid
-    @end_values = []
-    traverse_grid(start_position)
+    set_locations
+    @visited_locations = Set.new
+    @visitation_queue = [[start_position, 0]]
   end
 
-  def traverse_grid(position, chain_value = 0)
-    DIRS.each do |dir|
-      if dir == position.facing
-        new_position = Position.new(position.coordinates + dir, position.facing)
-        if new_position.coordinates == end_coordinates
-          @end_values << chain_value + 1
-          puts "End reached at: #{chain_value + 1}"
-        elsif !walls.include?(new_position.coordinates)
-          if location_values[new_position.coordinates].nil? || location_values[new_position.coordinates] > chain_value + 1
-            update_positions(new_position, chain_value, 1)
-          end
-        end
-      else
-        new_position = Position.new(position.coordinates + dir, dir)
-        value = 1000*([(position.facing.real-dir.real).abs, (position.facing.imag-dir.imag).abs].max) + 1
-        if location_values[new_position.coordinates].nil? || location_values[new_position.coordinates] > chain_value + value
-          if !walls.include?(new_position.coordinates)
-            update_positions(new_position, chain_value, value)
-          end
-        end
+  def composite_key(position)
+    "#{position.coordinates.real},#{position.coordinates.imag},#{DIRS.find_index(position.facing)}"
+  end
+
+  def solve_maze
+    score = 0
+    while visitation_queue.length > 0 do
+      visitation_queue.sort! {|l1, l2| l1[1] <=> l2[1]}
+
+      location = visitation_queue.shift
+      position = location[0]
+      score = location[1]
+      key = composite_key(position)
+
+      return score if position.coordinates == end_coordinates
+      next if visited_locations.include?(key)
+
+      visited_locations.add(key)
+
+      new_position = Position.new(position.coordinates + position.facing, position.facing)
+      if !walls.include?(new_position.coordinates)
+        visitation_queue << [new_position, score + 1]
       end
-    end
-  end
 
-  def update_positions(position, chain_value, value)
-    location_values[position.coordinates] = chain_value + value
-    traverse_grid(position, chain_value + value)
-  end
-
-  def min_route
-    end_values.min
+      right_turn = Position.new(position.coordinates, position.facing * Complex(0,-1))
+      left_turn = Position.new(position.coordinates, position.facing * Complex(0,1))
+      visitation_queue << [right_turn, score+1000]
+      visitation_queue << [left_turn, score+1000]
+    end 
+    return score
   end
 
   def set_locations
@@ -75,24 +72,17 @@ class OlympicMap < Mapping
           walls << Complex(x,y)
         when 'S'
           @start_position = Position.new(Complex(x,y), Complex(1,0))
+          @location_values[composite_key(@start_position)] = 0
         when 'E'
           @end_coordinates = Complex(x,y)
         end
       end
     end
   end
-
-  def print_grid
-    grid.each_with_index do |row, y|
-      row.each_with_index do |cell, x|
-        print cell
-      end
-      puts
-    end
-    puts
-  end
 end
 
 map = OlympicMap.new(parsed_input)
 
-p map.min_route
+s = Time.now
+p map.solve_maze
+puts "Elapsed time: #{Time.now - s}"
